@@ -20,16 +20,18 @@ const storage = multer.diskStorage({
     },
 });
 
-// File filter validator (PDF and standard Images)
+// File filter validator (Accept all standard documents and image extensions)
 const fileFilter = (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|pdf/;
-    const extName = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimeType = allowedTypes.test(file.mimetype);
+    // Allowed extensions: images (jpg, jpeg, png, gif, bmp, webp, heic, heif, tiff) and docs (pdf, doc, docx, xls, xlsx, ppt, pptx, txt, rtf, odt)
+    const allowedExtensions = /jpeg|jpg|png|gif|bmp|webp|heic|heif|tiff|pdf|doc|docx|xls|xlsx|ppt|pptx|txt|rtf|odt/i;
+    const extName = allowedExtensions.test(path.extname(file.originalname).toLowerCase());
 
-    if (extName && mimeType) {
+    if (extName) {
         cb(null, true);
     } else {
-        cb(new Error("Only PDF documents and image formats (JPEG, JPG, PNG) are allowed."));
+        const error = new Error("Unsupported file format. Only PDF, Word, Excel, PowerPoint, Text documents, and standard images are allowed.");
+        error.status = 400;
+        cb(error);
     }
 };
 
