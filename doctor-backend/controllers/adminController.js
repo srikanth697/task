@@ -82,8 +82,10 @@ exports.approveDoctor = async (req, res) => {
         doctor.doctorId = generatedId;
         await doctor.save();
 
-        // Send transactional approval email via SMTP
-        await sendApprovalMail(doctor.email, doctor.fullName, generatedId);
+        // Send transactional approval email in the background (prevents blocking during SMTP timeouts on Render)
+        sendApprovalMail(doctor.email, doctor.fullName, generatedId).catch((err) => {
+            console.error(`Approval email delivery failed to ${doctor.email}:`, err.message);
+        });
 
         res.status(200).json({
             success: true,
@@ -126,8 +128,10 @@ exports.rejectDoctor = async (req, res) => {
         doctor.rejectionReason = rejectionReason;
         await doctor.save();
 
-        // Send rejection email via SMTP
-        await sendRejectionMail(doctor.email, doctor.fullName, rejectionReason);
+        // Send rejection email in the background (prevents blocking during SMTP timeouts on Render)
+        sendRejectionMail(doctor.email, doctor.fullName, rejectionReason).catch((err) => {
+            console.error(`Rejection email delivery failed to ${doctor.email}:`, err.message);
+        });
 
         res.status(200).json({
             success: true,

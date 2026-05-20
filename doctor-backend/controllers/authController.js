@@ -78,8 +78,10 @@ exports.registerDoctor = async (req, res) => {
             role: "doctor",
         });
 
-        // Send welcome/acknowledgement email
-        await sendWelcomeMail(email, mappedFullName);
+        // Send welcome/acknowledgement email in the background (prevents blocking during SMTP timeouts on Render)
+        sendWelcomeMail(email, mappedFullName).catch((err) => {
+            console.error(`Email delivery failed to ${email}:`, err.message);
+        });
 
         res.status(201).json({
             success: true,
