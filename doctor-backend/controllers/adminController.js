@@ -107,7 +107,7 @@ exports.approveDoctor = async (req, res) => {
 // Reject Doctor Application (Admin Panel / Protected)
 exports.rejectDoctor = async (req, res) => {
     try {
-        const { rejectionReason } = req.body;
+        const { rejectionReason } = req.body || {};
 
         if (!rejectionReason || rejectionReason.trim() === "") {
             return res.status(400).json({ message: "Rejection reason is required" });
