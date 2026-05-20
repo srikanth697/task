@@ -17,18 +17,33 @@ exports.registerDoctor = async (req, res) => {
             licenseNumber,
         } = req.body;
 
-        // Basic input validation
-        if (
-            !fullName ||
-            !email ||
-            !password ||
-            !mobileNumber ||
-            !gender ||
-            !experience ||
-            !specialization ||
-            !licenseNumber
-        ) {
-            return res.status(400).json({ message: "All registration fields are required" });
+        // Fallbacks mapping for API parameter resilience
+        const mappedFullName = fullName || req.body.name;
+        const mappedMobileNumber = mobileNumber || req.body.mobile || req.body.phone;
+
+        // Custom validation check listing missing parameters explicitly
+        const missingFields = [];
+        if (!mappedFullName) missingFields.push("fullName (or 'name')");
+        if (!email) missingFields.push("email");
+        if (!password) missingFields.push("password");
+        if (!mappedMobileNumber) missingFields.push("mobileNumber (or 'mobile'/'phone')");
+        if (!gender) missingFields.push("gender");
+        if (!experience) missingFields.push("experience");
+        if (!specialization) missingFields.push("specialization");
+        if (!licenseNumber) missingFields.push("licenseNumber");
+
+        if (missingFields.length > 0) {
+            return res.status(400).json({
+                message: `Missing required registration fields: ${missingFields.join(", ")}`
+            });
+        }
+
+        // Resilient parsing of experience value (handles strings like "5years" -> 5)
+        const parsedExperience = parseInt(experience, 10);
+        if (isNaN(parsedExperience)) {
+            return res.status(400).json({
+                message: "Experience must be a valid numeric value representing years of practice (e.g. 5)"
+            });
         }
 
         // Email uniqueness check
@@ -50,12 +65,12 @@ exports.registerDoctor = async (req, res) => {
 
         // Create doctor record in "pending" status
         const doctor = await Doctor.create({
-            fullName,
+            fullName: mappedFullName,
             email,
             password: hashedPassword,
-            mobileNumber,
+            mobileNumber: mappedMobileNumber,
             gender,
-            experience: Number(experience),
+            experience: parsedExperience,
             specialization,
             licenseNumber,
             documents,
@@ -64,7 +79,7 @@ exports.registerDoctor = async (req, res) => {
         });
 
         // Send welcome/acknowledgement email
-        await sendWelcomeMail(email, fullName);
+        await sendWelcomeMail(email, mappedFullName);
 
         res.status(201).json({
             success: true,
