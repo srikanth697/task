@@ -82,10 +82,11 @@ exports.approveDoctor = async (req, res) => {
         doctor.doctorId = generatedId;
         await doctor.save();
 
-        // Send transactional approval email in the background (prevents blocking during SMTP timeouts on Render)
-        sendApprovalMail(doctor.email, doctor.fullName, generatedId).catch((err) => {
-            console.error(`Approval email delivery failed to ${doctor.email}:`, err.message);
-        });
+        await sendApprovalMail(
+            doctor.email,
+            doctor.fullName,
+            generatedId
+        );
 
         res.status(200).json({
             success: true,
@@ -128,10 +129,11 @@ exports.rejectDoctor = async (req, res) => {
         doctor.rejectionReason = rejectionReason;
         await doctor.save();
 
-        // Send rejection email in the background (prevents blocking during SMTP timeouts on Render)
-        sendRejectionMail(doctor.email, doctor.fullName, rejectionReason).catch((err) => {
-            console.error(`Rejection email delivery failed to ${doctor.email}:`, err.message);
-        });
+        await sendRejectionMail(
+            doctor.email,
+            doctor.fullName,
+            rejectionReason
+        );
 
         res.status(200).json({
             success: true,
@@ -146,6 +148,73 @@ exports.rejectDoctor = async (req, res) => {
         });
     } catch (error) {
         console.error("Error rejecting doctor:", error.message);
+        res.status(500).json({ message: "Internal server error: " + error.message });
+    }
+};
+
+// Get all users/doctors (Admin Panel / Protected)
+exports.getAllUsers = async (req, res) => {
+    try {
+        const { role, status, search, page = 1, limit = 10 } = req.query;
+        const query = {};
+
+        // Apply filters
+        if (role) query.role = role;
+        if (status) query.status = status;
+        if (search) {
+            query.$or = [
+                { fullName: { $regex: search, $options: "i" } },
+                { email: { $regex: search, $options: "i" } },
+                { specialization: { $regex: search, $options: "i" } },
+            ];
+        }
+
+        // Pagination
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        const total = await Doctor.countDocuments(query);
+        
+        const users = await Doctor.find(query)
+            .select("-password")
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(parseInt(limit));
+
+        res.status(200).json({
+            success: true,
+            count: users.length,
+            total,
+            page: parseInt(page),
+            pages: Math.ceil(total / parseInt(limit)),
+            data: users,
+        });
+    } catch (error) {
+        console.error("Error fetching all users:", error.message);
+        res.status(500).json({ message: "Internal server error: " + error.message });
+    }
+};
+
+// Delete User/Doctor (Admin Panel / Protected)
+exports.deleteUser = async (req, res) => {
+    try {
+        const user = await Doctor.findById(req.params.id);
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        // Prevent admin from deleting themselves (safety check)
+        if (user._id.toString() === req.user._id.toString()) {
+            return res.status(400).json({ message: "Access denied: Admins cannot delete their own accounts via this endpoint." });
+        }
+
+        await Doctor.findByIdAndDelete(req.params.id);
+
+        res.status(200).json({
+            success: true,
+            message: `User ${user.fullName} (${user.email}) deleted successfully.`,
+        });
+    } catch (error) {
+        console.error("Error deleting user:", error.message);
         res.status(500).json({ message: "Internal server error: " + error.message });
     }
 };

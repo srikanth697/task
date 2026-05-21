@@ -78,10 +78,7 @@ exports.registerDoctor = async (req, res) => {
             role: "doctor",
         });
 
-        // Send welcome/acknowledgement email in the background (prevents blocking during SMTP timeouts on Render)
-        sendWelcomeMail(email, mappedFullName).catch((err) => {
-            console.error(`Email delivery failed to ${email}:`, err.message);
-        });
+        await sendWelcomeMail(email, mappedFullName);
 
         res.status(201).json({
             success: true,
@@ -158,6 +155,19 @@ exports.login = async (req, res) => {
         });
     } catch (error) {
         console.error("Login error:", error.message);
+        res.status(500).json({ message: "Internal server error: " + error.message });
+    }
+};
+
+// Get currently logged-in user profile (Protected)
+exports.getMe = async (req, res) => {
+    try {
+        res.status(200).json({
+            success: true,
+            data: req.user,
+        });
+    } catch (error) {
+        console.error("Get current user error:", error.message);
         res.status(500).json({ message: "Internal server error: " + error.message });
     }
 };

@@ -5,6 +5,8 @@ const {
     getDoctorDetails,
     approveDoctor,
     rejectDoctor,
+    getAllUsers,
+    deleteUser,
 } = require("../controllers/adminController");
 const { protect, adminOnly } = require("../middleware/authMiddleware");
 
@@ -22,5 +24,11 @@ router.put("/approve/:id", approveDoctor);
 
 // Route to reject a doctor application (store rejection reason, change status, send rejection email)
 router.put("/reject/:id", rejectDoctor);
+
+// Route to list all users/doctors with filtering/search/pagination
+router.get("/users", getAllUsers);
+
+// Route to delete a user/doctor by ID
+router.delete("/users/:id", deleteUser);
 
 module.exports = router;

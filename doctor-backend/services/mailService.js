@@ -5,9 +5,20 @@ const transporter = nodemailer.createTransport({
     port: 587,
     secure: false,
     auth: {
-        user: process.env.BREVO_SMTP_USER || process.env.BREVO_EMAIL,
+        user: process.env.BREVO_SMTP_USER,
         pass: process.env.BREVO_SMTP_KEY,
     },
+    tls: {
+        rejectUnauthorized: false,
+    },
+});
+
+transporter.verify((error, success) => {
+    if (error) {
+        console.log("SMTP VERIFY ERROR:", error);
+    } else {
+        console.log("SMTP SERVER READY");
+    }
 });
 
 /**
@@ -16,14 +27,14 @@ const transporter = nodemailer.createTransport({
 const sendMail = async (to, subject, html) => {
     try {
         await transporter.sendMail({
-            from: `"Doctor Portal" <${process.env.BREVO_EMAIL}>`,
+            from: `"Doctor Portal" <abe613001@smtp-brevo.com>`,
             to,
             subject,
             html,
         });
         console.log(`Email sent successfully to ${to}`);
     } catch (error) {
-        console.error(`Email delivery failed to ${to}:`, error.message);
+        console.error("FULL EMAIL ERROR:", error);
     }
 };
 
@@ -63,6 +74,21 @@ const sendApprovalMail = async (to, name, doctorId) => {
                 <p style="margin: 0; font-size: 16px;"><strong>Your Unique Doctor ID:</strong> <span style="font-family: monospace; font-size: 18px; color: #27AE60; font-weight: bold;">${doctorId}</span></p>
             </div>
             <p>You now have full access to the portal. You can log in using your registered email and password.</p>
+
+            <div style="margin-top: 25px;">
+                <a href="${process.env.FRONTEND_URL || 'https://YOUR_FRONTEND_URL'}/login"
+                style="
+                background:#2ECC71;
+                color:white;
+                padding:12px 22px;
+                text-decoration:none;
+                border-radius:6px;
+                font-weight:bold;
+                display:inline-block;
+                ">
+                Login Now
+                </a>
+            </div>
             <br>
             <p>Best regards,<br><strong>The Admin Team</strong></p>
         </div>
