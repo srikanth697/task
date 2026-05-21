@@ -2,15 +2,17 @@ const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
     host: "smtp-relay.brevo.com",
-    port: 587,
-    secure: false,
+    port: 465,
+    secure: true,
     auth: {
         user: process.env.BREVO_SMTP_USER,
         pass: process.env.BREVO_SMTP_KEY,
     },
-    tls: {
-        rejectUnauthorized: false,
-    },
+    connectionTimeout: 60000,
+    greetingTimeout: 30000,
+    socketTimeout: 60000,
+    dnsTimeout: 30000,
+    family: 4,
 });
 
 transporter.verify((error, success) => {
@@ -27,7 +29,7 @@ transporter.verify((error, success) => {
 const sendMail = async (to, subject, html) => {
     try {
         await transporter.sendMail({
-            from: `"Doctor Portal" <abe613001@smtp-brevo.com>`,
+            from: `"Doctor Portal" <${process.env.BREVO_EMAIL}>`,
             to,
             subject,
             html,
